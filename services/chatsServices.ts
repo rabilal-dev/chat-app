@@ -11,3 +11,9 @@ export const getAvalableChats = async (q: string) => {
   const { data } = response.data;
   return { chats: data };
 };
+
+export const createChat = async (userId: string) => {
+  const response = await api.post("/conversations/direct", { recipientId:userId });
+  const { data } = response.data;
+  return { chat: data };
+};

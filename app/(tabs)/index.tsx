@@ -1,3 +1,4 @@
+import AuthBackground from "@/components/AuthBackground";
 import { ChatListItem } from "@/components/ChatListItem";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -15,7 +16,6 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import AuthBackground from "@/components/AuthBackground";
 
 export default function ChatsScreen() {
   const colorScheme = useColorScheme();
@@ -32,6 +32,7 @@ export default function ChatsScreen() {
       try {
         const data = await getChatList();
         setAllChats(data.chats);
+        console.log("ChatsData: ", data.chats)
       } catch (error) {
         console.log("Error: ", error);
       }
