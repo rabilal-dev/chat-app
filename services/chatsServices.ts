@@ -5,3 +5,9 @@ export const getChatList = async () => {
   const { data } = response.data;
   return { chats: data };
 };
+
+export const getAvalableChats = async (q: string) => {
+  const response = await api.get("/users/search", { params: { q } });
+  const { data } = response.data;
+  return { chats: data };
+};

@@ -1,63 +1,115 @@
 import AuthBackground from '@/components/AuthBackground';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { findUser } from '@/libs/find-user';
+import * as Contacts from 'expo-contacts';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-interface Contact {
-  id: string;
-  name: string;
-  avatar: string;
-  status?: string;
-}
-
-const MOCK_CONTACTS: Contact[] = [];
 
 export default function NewChatScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [contactsAlreadyOnWave, setContactsAlreadyOnWave] = useState<any[]>([]);
+  const [existingContactsIds, setExistingContactsIds] = useState<string[]>([]);
 
-  const filteredContacts = MOCK_CONTACTS.filter(contact =>
-    contact.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredContacts = contacts.filter(contact =>
+    contact.name.includes(searchQuery)
   );
 
-  const handleContactPress = (contact: Contact) => {
+  const handleContactPress = (contact: any) => {
     router.push(`/chat/${contact.id}`);
   };
 
-  const renderContact = ({ item }: { item: Contact }) => (
-    <TouchableOpacity
-      style={[styles.contactItem, { backgroundColor: isDark ? 'rgba(31, 44, 52, 0.4)' : 'rgba(255, 255, 255, 0.4)' }]}
-      onPress={() => handleContactPress(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.avatarContainer}>
-        <Image source={{ uri: item.avatar }} style={styles.avatar} />
-        {item.status === 'online' && <View style={styles.onlineBadge} />}
-      </View>
-      <View style={styles.contactInfo}>
-        <Text style={[styles.contactName, { color: isDark ? '#FFF' : '#000' }]}>
-          {item.name}
-        </Text>
-        {item.status && (
-          <Text style={[styles.contactStatus, { color: isDark ? '#A1A1AA' : '#666' }]}>
-            {item.status}
+
+  const loadContacts = async () => {
+    // Request permission
+    const { status } = await Contacts.requestPermissionsAsync();
+
+    if (status !== 'granted') {
+      alert('Permission to access contacts was denied');
+      return;
+    }
+
+    // Fetch contacts
+    const { data } = await Contacts.getContactsAsync({
+      fields: [
+        Contacts.Fields.PhoneNumbers,
+        Contacts.Fields.Emails,
+        Contacts.Fields.Image,
+      ],
+    });
+    const { updatedUsers, existingContactsIds } = await findUser(data);
+    setContacts(data);
+    setContactsAlreadyOnWave(updatedUsers);
+    setExistingContactsIds(existingContactsIds);
+  };
+
+  useEffect(() => {
+    loadContacts();
+  }, [])
+
+  const renderContact = ({ item }: { item: any }) => {
+    return (
+      <TouchableOpacity
+        style={[styles.contactItem, { backgroundColor: isDark ? 'rgba(31, 44, 52, 0.4)' : 'rgba(255, 255, 255, 0.4)' }]}
+        // onPress={() => handleContactPress(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.avatarContainer}>
+          <Image source={{ uri: item?.deviceContact?.imageAvailable ? item?.deviceContact?.image?.uri : null }} style={styles.avatar} />
+          {item?.status === 'online' && <View style={styles.onlineBadge} />}
+        </View>
+        <View style={styles.contactInfo}>
+          <Text style={[styles.contactName, { color: isDark ? '#FFF' : '#000' }]}>
+            {item?.deviceContact?.name}
           </Text>
-        )}
-      </View>
-      <IconSymbol name="chevron.right" size={20} color={isDark ? '#444' : '#CCC'} />
-    </TouchableOpacity>
-  );
+          {item?.deviceContact?.status && (
+            <Text style={[styles.contactStatus, { color: isDark ? '#A1A1AA' : '#666' }]}>
+              {item?.status}
+            </Text>
+          )}
+        </View>
+        <IconSymbol name="chevron.right" size={20} color={isDark ? '#444' : '#CCC'} />
+      </TouchableOpacity>
+    )
+  };
+
+    const renderContactNotOnWave = ({ item }: { item: any }) => {
+    return (
+      <TouchableOpacity
+        style={[styles.contactItem, { backgroundColor: isDark ? 'rgba(31, 44, 52, 0.4)' : 'rgba(255, 255, 255, 0.4)' }]}
+        // onPress={() => handleContactPress(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.avatarContainer}>
+          <Image source={{ uri: item?.imageAvailable ? item?.image?.uri : null }} style={styles.avatar} />
+          {item?.status === 'online' && <View style={styles.onlineBadge} />}
+        </View>
+        <View style={styles.contactInfo}>
+          <Text style={[styles.contactName, { color: isDark ? '#FFF' : '#000' }]}>
+            {item?.name}
+          </Text>
+          {item?.status && (
+            <Text style={[styles.contactStatus, { color: isDark ? '#A1A1AA' : '#666' }]}>
+              {item?.status}
+            </Text>
+          )}
+        </View>
+        <IconSymbol name="chevron.right" size={20} color={isDark ? '#444' : '#CCC'} />
+      </TouchableOpacity>
+    )
+  };
 
   return (
     <AuthBackground>
       <StatusBar style="auto" />
-      
+
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -83,10 +135,29 @@ export default function NewChatScreen() {
 
       {/* Contacts List */}
       <FlatList
-        data={filteredContacts}
-        keyExtractor={(item) => item.id}
+        data={contactsAlreadyOnWave.length > 0 ? contactsAlreadyOnWave : []} // Show only contacts that are on Wave
+        //@ts-ignore
+        keyExtractor={(item) => item?.deviceContact?.id}
         renderItem={renderContact}
         ListHeaderComponent={<Text style={styles.listHeader}>Contacts on Wave</Text>}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <IconSymbol name="person.fill" size={60} color={isDark ? '#333' : '#DDD'} />
+            <Text style={[styles.emptyText, { color: isDark ? '#666' : '#999' }]}>
+              No contacts found
+            </Text>
+          </View>
+        }
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 20 }]}
+        showsVerticalScrollIndicator={false}
+      />
+      {/* Contacts List */}
+      <FlatList
+        data={filteredContacts} // Show only contacts that are on Wave
+        //@ts-ignore
+        keyExtractor={(item) => item?.id}
+        renderItem={renderContactNotOnWave}
+        ListHeaderComponent={<Text style={styles.listHeader}>Invite to Wave</Text>}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <IconSymbol name="person.fill" size={60} color={isDark ? '#333' : '#DDD'} />
