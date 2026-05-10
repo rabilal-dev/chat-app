@@ -10,53 +10,18 @@ const storage = createJSONStorage(() =>
 );
 
 export interface Chat {
-    /**
-     * Database user/contact information
-     */
     dbContact: any;
-
-    /**
-     * Device contact information from expo-contacts
-     */
     deviceContact: any;
 }
 
 interface ChatsStore {
     chats: Chat[];
-
-    /**
-     * Replace all chats
-     */
     setChats: (chats: Chat[]) => void;
-
-    /**
-     * Add one chat if it does not already exist
-     */
     addChat: (chat: Chat) => void;
-
-    /**
-     * Add many chats while preventing duplicates
-     */
     addChats: (chats: Chat[]) => void;
-
-    /**
-     * Update a chat by id
-     */
     updateChat: (chatId: string, updates: Partial<Chat>) => void;
-
-    /**
-     * Remove a chat by id
-     */
     removeChat: (chatId: string) => void;
-
-    /**
-     * Clear all chats
-     */
     clearChats: () => void;
-
-    /**
-     * Get a chat by id
-     */
     getChatById: (chatId: string) => Chat | undefined;
 }
 
