@@ -1,98 +1,155 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { ChatListItem } from "@/components/ChatListItem";
+import { FloatingActionButton } from "@/components/FloatingActionButton";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { MOCK_CHATS } from "@/constants/MockData";
+import { getChatList } from "@/services/chatsServices";
+import { useNavigation, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import React, { useEffect, useLayoutEffect, useState } from "react";
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  useColorScheme,
+  View,
+} from "react-native";
+import AuthBackground from "@/components/AuthBackground";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function ChatsScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const navigation = useNavigation();
+  const router = useRouter();
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [allChats, setAllChats] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function getChats() {
+      try {
+        const data = await getChatList();
+        setAllChats(data.chats);
+      } catch (error) {
+        console.log("Error: ", error);
+      }
+    }
+
+    getChats();
+  }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitleAlign: "left",
+      headerStyle: {
+        backgroundColor: isDark ? "#1F2C33" : "#7C3AED",
+      },
+      headerTintColor: "#FFF",
+      headerTitle: isSearching
+        ? () => (
+            <TextInput
+              autoFocus
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search..."
+              placeholderTextColor="rgba(255,255,255,0.7)"
+              style={{ color: "#FFF", fontSize: 18, minWidth: 200 }}
+              selectionColor="#FFF"
             />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+          )
+        : "Wave",
+      headerRight: () => (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginRight: 12,
+            gap: 16,
+          }}
+        >
+          {!isSearching && (
+            <IconSymbol name="camera" size={24} color="#FFF" />
+          )}
+          <Pressable
+            onPress={() => {
+              if (isSearching) {
+                setIsSearching(false);
+                setSearchQuery("");
+              } else {
+                setIsSearching(true);
+              }
+            }}
+            hitSlop={10}
+            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+          >
+            <IconSymbol
+              name={isSearching ? "xmark" : "magnifyingglass"}
+              size={24}
+              color="#FFF"
+            />
+          </Pressable>
+          {!isSearching && (
+            <Pressable
+              onPress={() => router.push("/profile" as any)}
+              hitSlop={10}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+            >
+              <IconSymbol name="ellipsis" size={24} color="#FFF" />
+            </Pressable>
+          )}
+        </View>
+      ),
+    });
+  }, [navigation, isSearching, searchQuery, router, isDark]);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const filteredChats = MOCK_CHATS.filter(
+    (chat) =>
+      chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  return (
+    <AuthBackground>
+      <StatusBar style="light" />
+      <FlatList
+        data={filteredChats}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <ChatListItem
+            chat={item}
+            onPress={() => router.push(`/chat/${item.id}` as any)}
+          />
+        )}
+        ListHeaderComponent={<View style={{ height: 16 }} />}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <IconSymbol name="bubble.right.fill" size={60} color={isDark ? "#333" : "#DDD"} />
+            <Text style={{ color: isDark ? "#888" : "#999", marginTop: 12, fontSize: 16 }}>
+              No chats found
+            </Text>
+          </View>
+        }
+        contentContainerStyle={{
+          paddingBottom: 100,
+          flexGrow: 1,
+        }}
+        showsVerticalScrollIndicator={false}
+      />
+      <FloatingActionButton
+        onPress={() => navigation.navigate("new-chat" as never)}
+      />
+    </AuthBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  emptyContainer: {
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    marginTop: 100,
   },
 });

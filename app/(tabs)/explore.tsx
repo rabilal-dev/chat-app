@@ -1,112 +1,225 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { MOCK_STATUSES, StatusItemT } from '@/constants/MockData';
+import { useAuthStore } from '@/store/authStore';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useColorScheme,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AuthBackground from '@/components/AuthBackground';
 
-export default function TabTwoScreen() {
+export default function UpdatesScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
+  const router = useRouter();
+
+  const textColor = isDark ? '#FFF' : '#000';
+  const subTextColor = isDark ? '#A1A1AA' : '#666';
+  const itemBg = isDark ? 'rgba(31, 44, 52, 0.4)' : 'rgba(255, 255, 255, 0.4)';
+
+  const StatusRow = ({ item, isMe = false }: { item?: StatusItemT; isMe?: boolean }) => {
+    const avatar = isMe ? (user?.avatar || 'https://i.pravatar.cc/150?u=me') : item?.avatar;
+    const name = isMe ? 'My status' : item?.name;
+    const time = isMe ? 'Tap to add status update' : item?.time;
+    const hasUnseen = item?.hasUnseen || false;
+
+    const handlePress = () => {
+      if (!isMe && item) {
+        router.push(`/status/${item.id}` as any);
+      }
+    };
+
+    return (
+      <Pressable 
+        style={({ pressed }) => [
+          styles.row, 
+          { backgroundColor: pressed ? (isDark ? 'rgba(31, 44, 52, 0.8)' : 'rgba(255, 255, 255, 0.8)') : itemBg }
+        ]} 
+        onPress={handlePress}
+      >
+        <View style={styles.avatarContainer}>
+          <View style={[
+            styles.ring,
+            { borderColor: isMe ? 'transparent' : (hasUnseen ? '#7C3AED' : '#888') }
+          ]}>
+            <Image
+              source={avatar}
+              style={styles.avatar}
+              contentFit="cover"
+            />
+          </View>
+          {isMe && (
+            <View style={styles.plusBadge}>
+              <IconSymbol name="plus.circle.fill" size={20} color="#7C3AED" />
+            </View>
+          )}
+        </View>
+        <View style={styles.contentContainer}>
+          <View style={styles.textWrapper}>
+            <Text style={[styles.name, { color: textColor }]}>{name}</Text>
+            <Text style={[styles.time, { color: subTextColor }]}>{time}</Text>
+          </View>
+        </View>
+      </Pressable>
+    );
+  };
+
+  const unseenStatuses = MOCK_STATUSES.filter(s => s.hasUnseen);
+  const seenStatuses = MOCK_STATUSES.filter(s => !s.hasUnseen);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <AuthBackground>
+      <FlatList
+        data={[]} 
+        renderItem={null}
+        ListHeaderComponent={() => (
+          <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+            <StatusRow isMe />
+
+            {unseenStatuses.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.sectionHeaderText, { color: '#7C3AED' }]}>Recent updates</Text>
+                </View>
+                {unseenStatuses.map(item => (
+                  <StatusRow key={item.id} item={item} />
+                ))}
+              </>
+            )}
+
+            {seenStatuses.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.sectionHeaderText, { color: '#7C3AED' }]}>Viewed updates</Text>
+                </View>
+                {seenStatuses.map(item => (
+                  <StatusRow key={item.id} item={item} />
+                ))}
+              </>
+            )}
+          </View>
+        )}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      />
+
+      {/* Floating Action Buttons */}
+      <View style={styles.fabContainer}>
+        <Pressable style={[styles.fabSmall, { backgroundColor: isDark ? 'rgba(31, 44, 52, 0.9)' : 'rgba(255, 255, 255, 0.9)' }]}>
+          <IconSymbol name="pencil" size={20} color={isDark ? '#FFF' : '#5E5E5E'} />
+        </Pressable>
+        <Pressable style={styles.fabLarge}>
+          <IconSymbol name="camera.fill" size={24} color="#FFF" />
+        </Pressable>
+      </View>
+    </AuthBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
   },
-  titleContainer: {
+  row: {
     flexDirection: 'row',
-    gap: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    borderRadius: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(124, 58, 237, 0.05)',
+  },
+  avatarContainer: {
+    position: 'relative',
+    paddingVertical: 10,
+  },
+  ring: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 2,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#7C3AED',
+  },
+  plusBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: -2,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+  },
+  contentContainer: {
+    flex: 1,
+    marginLeft: 16,
+    paddingVertical: 16,
+  },
+  textWrapper: {
+    justifyContent: 'center',
+  },
+  name: {
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  time: {
+    fontSize: 14,
+  },
+  sectionHeader: {
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+  },
+  sectionHeaderText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 90, // Increased from 24 to clear the absolute tab bar
+    right: 24,
+    alignItems: 'center',
+    gap: 16,
+  },
+  fabSmall: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  fabLarge: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#7C3AED',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
 });
